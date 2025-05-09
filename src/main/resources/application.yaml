@@ -1,0 +1,159 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: hmdp
+  datasource:
+    # 主数据源配置(写操作)
+    master:
+      driver-class-name: com.mysql.jdbc.Driver
+      jdbc-url: jdbc:mysql://127.0.0.1:3306/hmdp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+    # 从数据源配置(读操作)
+    slave1:
+      driver-class-name: com.mysql.jdbc.Driver
+      jdbc-url: jdbc:mysql://192.168.10.101:3306/hmdp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+    slave2:
+      driver-class-name: com.mysql.jdbc.Driver
+      jdbc-url: jdbc:mysql://192.168.10.102:3306/hmdp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+  redis:
+    # 修改为使用Redis Sentinel模式，支持主从架构
+    host: 192.168.10.100  # 添加单节点配置，用于兼容其他组件引用
+    port: 6379  # 添加单节点配置，用于兼容其他组件引用
+    sentinel:
+      master: mymaster # 哨兵监控的主节点名称
+      nodes: 
+        - 192.168.10.100:26379 # 哨兵节点1 
+        - 192.168.10.101:26379 # 哨兵节点2
+        - 192.168.10.102:26379 # 哨兵节点3
+    password: root
+    lettuce:
+      pool:
+        max-active: 10
+        max-idle: 10
+        min-idle: 1
+        time-between-eviction-runs: 10s
+      # 增加读写分离配置
+      read-from: REPLICA # 优先从从节点读取
+  jackson:
+    default-property-inclusion: non_null # JSON处理时忽略非空字段
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    # 开启发送确认
+    publisher-confirm-type: correlated
+    # 开启发送失败退回
+    publisher-returns: true
+    # 开启ACK
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+  # 开启配置属性绑定
+  config:
+    activate:
+      on-profile: default
+  cloud:
+    sentinel:
+      transport:
+        dashboard: localhost:8080  # Sentinel控制台地址
+        port: 8719                # 客户端监控API端口，用于上报监控数据
+      datasource:
+        # 限流规则持久化到Redis
+        flow:
+          redis:
+            host: 127.0.0.1  # 改为具体的地址，不使用占位符
+            port: 6379  # 改为具体的端口
+            password: ${spring.redis.password}
+            database: 0
+            key: sentinel:flow:rules
+            data-type: json
+        # 熔断规则持久化到Redis
+        degrade:
+          redis:
+            host: 127.0.0.1  # 改为具体的地址，不使用占位符
+            port: 6379  # 改为具体的端口
+            password: ${spring.redis.password}
+            database: 0
+            key: sentinel:degrade:rules
+            data-type: json
+
+# Canal配置
+canal:
+  hostname: 127.0.0.1
+  port: 11111
+  destination: example
+  username: root  # 与MySQL用户一致
+  password: root  # 与MySQL密码一致
+  batchSize: 1000
+    
+# 缓存配置
+cache:
+  # 本地缓存配置
+  local:
+    # 初始容量
+    initial-capacity: 100
+    # 最大容量
+    maximum-size: 10000
+    # 过期时间（秒）
+    expire-after-write: 300
+  # Redis缓存配置
+  redis:
+    # 默认过期时间（秒）
+    default-ttl: 1800
+    # 空值过期时间（秒）
+    null-ttl: 60
+    
+mybatis-plus:
+  type-aliases-package: com.hmdp.entity # 别名扫描包
+logging:
+  level:
+    com.hmdp: debug
+
+# Actuator监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: 'prometheus,health,info,metrics'
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+
+# XXL-Job配置
+xxl:
+  job:
+    admin:
+      addresses: http://127.0.0.1:8080/xxl-job-admin # XXL-Job调度中心地址
+    executor:
+      appname: hmdp-executor # 执行器名称
+      ip: # 默认为空，自动获取IP
+      port: 9999 # 执行器端口
+      logpath: ./logs/xxl-job # 日志路径
+      logretentiondays: 30 # 日志保留天数
+    accessToken: # 访问令牌，默认为空
+
+# JWT配置
+jwt:
+  # JWT密钥，生产环境应使用强密钥
+  secret: hmdp_jwt_secret_key_please_change_in_production_environment
+  # JWT过期时间，24小时（毫秒）
+  expiration: 86400000
+  # JWT HTTP头
+  header: Authorization

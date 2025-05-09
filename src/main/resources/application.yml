@@ -1,0 +1,43 @@
+# XXL-Job配置
+xxl:
+  job:
+    admin:
+      # XXL-Job调度中心地址
+      addresses: http://localhost:8080/xxl-job-admin
+    executor:
+      # 执行器名称
+      appname: hmdp-job-executor
+      # 执行器IP（可空，自动获取）
+      ip: 
+      # 执行器端口
+      port: 9999
+      # 日志路径
+      logpath: ./logs/xxl-job
+      # 日志保留天数
+      logretentiondays: 30
+    # 访问令牌（可空）
+    accessToken: 
+
+# 布隆过滤器配置
+bloom:
+  filter:
+    # 是否启用布隆过滤器
+    enabled: true
+    # 默认使用的策略
+    defaultStrategy: redisson
+    # 默认预估元素数量
+    defaultExpectedInsertions: 10000
+    # 默认误判率
+    defaultFalseProbability: 0.01
+    # 具体布隆过滤器配置
+    filters:
+      # 默认过滤器
+      default:
+        strategy: redisson
+        expectedInsertions: 10000
+        falseProbability: 0.01
+      # 店铺过滤器
+      shop:
+        strategy: redisson
+        expectedInsertions: 10000
+        falseProbability: 0.001
